@@ -25,13 +25,14 @@ namespace DesktopIntegrationDemo
     public partial class MainWindow : Window
     {
         static string scope = "wl.emails%20wl.basic%20wl.offline_access%20wl.signin";
-        static string subscriptionKey = "Yours here";
-        static string client_id = "Yours here";
-        static string client_secret = "Yours here";
+        static string subscriptionKey = "Yours here"; //GUID style
+        static string client_id = "Yours here"; //GUID style
+        //static string client_secret = "Yours here";
         static Uri signInUrl = new Uri(String.Format(@"https://login.live.com/oauth20_authorize.srf?client_id={0}&redirect_uri=https://login.live.com/oauth20_desktop.srf&response_type=code&scope={1}", client_id, scope));
 
-        static string accessTokenUrl = String.Format(@"https://login.live.com/oauth20_token.srf?client_id={0}&client_secret={1}&redirect_uri=https://login.live.com/oauth20_desktop.srf&grant_type=authorization_code&code=", client_id, client_secret);
-        static string refreshTokenUrl = String.Format(@"https://login.live.com/oauth20_token.srf?client_id={0}&client_secret={1}&redirect_uri=https://login.live.com/oauth20_desktop.srf&grant_type=refresh_token&refresh_token=", client_id, client_secret);
+        //Remove client_secret parameter to avoid HTTP 400 Bad Request error: Public clients can't send a client secret. 
+        static string accessTokenUrl = String.Format(@"https://login.live.com/oauth20_token.srf?client_id={0}&redirect_uri=https://login.live.com/oauth20_desktop.srf&grant_type=authorization_code&code=", client_id);
+        //static string refreshTokenUrl = String.Format(@"https://login.live.com/oauth20_token.srf?client_id={0}&client_secret={1}&redirect_uri=https://login.live.com/oauth20_desktop.srf&grant_type=refresh_token&refresh_token=", client_id, client_secret);
         
         public MainWindow()
         {
@@ -58,7 +59,17 @@ namespace DesktopIntegrationDemo
 
         public async void makeAccessTokenRequest(string requestUrl)
         {
-            HttpWebRequest request = WebRequest.Create(requestUrl) as HttpWebRequest;
+            //Use POST method instead of GET to avoid HTTP 400 Bad Request error: The provided request must be sent using the HTTP 'POST' method.
+            var p = requestUrl.Split('?');
+            var url = p.First();
+            var body = p.Last();
+            HttpWebRequest request = WebRequest.Create(url) as HttpWebRequest;
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            using (var sw = new StreamWriter(request.GetRequestStream()))
+            {
+                sw.Write(body);
+            }
             string responseTxt = String.Empty;
             using (WebResponse response = await request.GetResponseAsync())
             {
